@@ -60,13 +60,13 @@ export class LoginPage {
                 </div>
 
                 <!-- Login/Signup Form -->
-                <form id="auth-form" class="slide-up">
+                <form id="auth-form" class="slide-up" novalidate>
                     ${!this.isLoginMode ? `
                         <div class="form-field">
                             <label class="mdc-text-field mdc-text-field--filled" style="width: 100%;">
                                 <span class="mdc-text-field__ripple"></span>
                                 <span class="mdc-floating-label" id="name-label">Full Name</span>
-                                <input class="mdc-text-field__input" type="text" id="name" name="name" required>
+                                <input class="mdc-text-field__input" type="text" id="name" name="name">
                                 <span class="mdc-line-ripple"></span>
                             </label>
                         </div>
@@ -76,7 +76,7 @@ export class LoginPage {
                         <label class="mdc-text-field mdc-text-field--filled" style="width: 100%;">
                             <span class="mdc-text-field__ripple"></span>
                             <span class="mdc-floating-label" id="email-label">Email</span>
-                            <input class="mdc-text-field__input" type="text" id="email" name="email" required>
+                            <input class="mdc-text-field__input" type="text" id="email" name="email">
                             <span class="mdc-line-ripple"></span>
                         </label>
                     </div>
@@ -85,7 +85,7 @@ export class LoginPage {
                         <label class="mdc-text-field mdc-text-field--filled" style="width: 100%;">
                             <span class="mdc-text-field__ripple"></span>
                             <span class="mdc-floating-label" id="password-label">Password</span>
-                            <input class="mdc-text-field__input" type="password" id="password" name="password" required>
+                            <input class="mdc-text-field__input" type="password" id="password" name="password">
                             <span class="mdc-line-ripple"></span>
                         </label>
                         ${!this.isLoginMode ? `
@@ -102,7 +102,7 @@ export class LoginPage {
                             <label class="mdc-text-field mdc-text-field--filled" style="width: 100%;">
                                 <span class="mdc-text-field__ripple"></span>
                                 <span class="mdc-floating-label" id="confirm-password-label">Confirm Password</span>
-                                <input class="mdc-text-field__input" type="password" id="confirm-password" name="confirmPassword" required>
+                                <input class="mdc-text-field__input" type="password" id="confirm-password" name="confirmPassword">
                                 <span class="mdc-line-ripple"></span>
                             </label>
                         </div>
@@ -185,30 +185,31 @@ export class LoginPage {
     initializeMDCTextFields(container) {
         const textFields = container.querySelectorAll('.mdc-text-field');
         textFields.forEach(textField => {
-            // Initialize MDC text field if available
-            if (window.mdc && window.mdc.textField && window.mdc.textField.MDCTextField) {
-                new window.mdc.textField.MDCTextField(textField);
-            } else {
-                // Fallback: manually handle floating labels
-                const input = textField.querySelector('.mdc-text-field__input');
-                const label = textField.querySelector('.mdc-floating-label');
-                
-                if (input && label) {
-                    const updateLabel = () => {
-                        if (input.value || input === document.activeElement) {
-                            label.classList.add('mdc-floating-label--float-above');
-                        } else {
-                            label.classList.remove('mdc-floating-label--float-above');
-                        }
-                    };
+            // Skip MDC initialization to avoid validation conflicts
+            // Just handle floating labels manually
+            const input = textField.querySelector('.mdc-text-field__input');
+            const label = textField.querySelector('.mdc-floating-label');
+            
+            if (input && label) {
+                const updateLabel = () => {
+                    if (input.value || input === document.activeElement) {
+                        label.classList.add('mdc-floating-label--float-above');
+                    } else {
+                        label.classList.remove('mdc-floating-label--float-above');
+                    }
+                };
 
-                    input.addEventListener('focus', updateLabel);
-                    input.addEventListener('blur', updateLabel);
-                    input.addEventListener('input', updateLabel);
-                    
-                    // Initial check
-                    updateLabel();
-                }
+                input.addEventListener('focus', updateLabel);
+                input.addEventListener('blur', updateLabel);
+                input.addEventListener('input', updateLabel);
+                
+                // Remove any validation attributes that might cause issues
+                input.removeAttribute('pattern');
+                input.removeAttribute('minlength');
+                input.removeAttribute('maxlength');
+                
+                // Initial check
+                updateLabel();
             }
         });
     }
