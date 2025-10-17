@@ -262,22 +262,31 @@ export class LoginPage {
 
         await this.authService.login(email.trim(), password);
         
-        console.log('Login successful, attempting navigation...');
-        console.log('Router available:', !!window.goTogetherRouter);
+        // SIMPLE APPROACH: Just render the dashboard directly
+        console.log('Login successful, rendering dashboard directly');
         
-        // Redirect to dashboard on successful login
-        if (window.goTogetherRouter) {
-            console.log('Using router to navigate to dashboard');
-            window.goTogetherRouter.navigate('/dashboard');
-        } else {
-            console.log('Router not available, using window.location');
-            window.location.href = '/dashboard';
-        }
+        // Clear the current page
+        const app = document.getElementById('app');
         
-        // Add a small delay to see if navigation is working
-        setTimeout(() => {
-            console.log('Current URL after navigation attempt:', window.location.href);
-        }, 100);
+        // Import and render dashboard directly
+        import('../pages/dashboard.js').then(({ DashboardPage }) => {
+            const dashboard = new DashboardPage();
+            app.innerHTML = '';
+            app.appendChild(dashboard.render());
+            
+            // Update URL without router complications
+            window.history.pushState({}, '', '/dashboard');
+        }).catch(error => {
+            console.error('Failed to load dashboard:', error);
+            // Fallback: show simple success message
+            app.innerHTML = `
+                <div style="padding: 40px; text-align: center; font-family: Arial, sans-serif;">
+                    <h1 style="color: #1976d2;">Login Successful!</h1>
+                    <p>Welcome to Go Together</p>
+                    <p>Dashboard loading...</p>
+                </div>
+            `;
+        });
     }
 
     /**
@@ -317,13 +326,31 @@ export class LoginPage {
 
         await this.authService.register(userData);
         
-        // Redirect to dashboard on successful registration
-        if (window.goTogetherRouter) {
-            window.goTogetherRouter.navigate('/dashboard');
-        } else {
-            // Fallback to page reload if router not available
-            window.location.href = '/dashboard';
-        }
+        // SIMPLE APPROACH: Just render the dashboard directly
+        console.log('Registration successful, rendering dashboard directly');
+        
+        // Clear the current page
+        const app = document.getElementById('app');
+        
+        // Import and render dashboard directly
+        import('../pages/dashboard.js').then(({ DashboardPage }) => {
+            const dashboard = new DashboardPage();
+            app.innerHTML = '';
+            app.appendChild(dashboard.render());
+            
+            // Update URL without router complications
+            window.history.pushState({}, '', '/dashboard');
+        }).catch(error => {
+            console.error('Failed to load dashboard:', error);
+            // Fallback: show simple success message
+            app.innerHTML = `
+                <div style="padding: 40px; text-align: center; font-family: Arial, sans-serif;">
+                    <h1 style="color: #1976d2;">Registration Successful!</h1>
+                    <p>Welcome to Go Together</p>
+                    <p>Dashboard loading...</p>
+                </div>
+            `;
+        });
     }
 
     /**
