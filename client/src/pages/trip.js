@@ -159,6 +159,9 @@ export class TripPage {
         // Invite button
         const inviteBtn = container.querySelector('#invite-btn');
         inviteBtn?.addEventListener('click', this.handleInvite.bind(this));
+        
+        // Add shopping item button (will be added when shopping tab is rendered)
+        this.attachShoppingEventListeners();
     }
 
     /**
@@ -280,6 +283,8 @@ export class TripPage {
                 break;
             case 'shopping':
                 tabContent.innerHTML = this.renderShoppingTab();
+                // Re-attach shopping event listeners after rendering
+                this.attachShoppingEventListeners();
                 break;
             case 'todos':
                 tabContent.innerHTML = this.renderTodosTab();
@@ -511,6 +516,54 @@ export class TripPage {
      */
     handleInvite() {
         alert('Invite functionality coming soon!');
+    }
+
+    /**
+     * Attach event listeners for shopping functionality
+     */
+    attachShoppingEventListeners() {
+        const addItemBtn = document.getElementById('add-shopping-item');
+        if (addItemBtn) {
+            addItemBtn.removeEventListener('click', this.handleAddShoppingItem);
+            addItemBtn.addEventListener('click', this.handleAddShoppingItem.bind(this));
+        }
+    }
+
+    /**
+     * Handle adding new shopping item
+     */
+    async handleAddShoppingItem() {
+        const name = prompt('Item name:');
+        if (!name || !name.trim()) return;
+
+        const quantity = prompt('Quantity:', '1');
+        if (!quantity || isNaN(quantity) || quantity < 1) return;
+
+        const category = prompt('Category (shelter, cooking, water, comfort, other):', 'other');
+        const notes = prompt('Notes (optional):') || '';
+
+        try {
+            const itemData = {
+                name: name.trim(),
+                quantity: parseInt(quantity),
+                category: category.toLowerCase() || 'other',
+                notes: notes.trim()
+            };
+
+            const response = await this.apiService.addShoppingItem(this.tripId, itemData);
+            
+            // Add to local data
+            this.shoppingItems.push(response.data);
+            
+            // Re-render shopping tab
+            this.renderTabContent();
+            
+            console.log('Shopping item added successfully');
+            
+        } catch (error) {
+            console.error('Error adding shopping item:', error);
+            alert('Failed to add item. Please try again.');
+        }
     }
 
     /**
