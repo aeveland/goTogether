@@ -140,7 +140,10 @@ export class DashboardPage {
      */
     async loadTrips() {
         try {
-            this.trips = await this.apiService.getTrips();
+            const response = await this.apiService.getTrips();
+            // Handle both mock API format {data: [...]} and direct array format
+            this.trips = response.data || response;
+            console.log('Loaded trips:', this.trips);
             this.renderTrips();
         } catch (error) {
             console.error('Failed to load trips:', error);
