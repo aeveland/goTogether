@@ -2,24 +2,97 @@ console.log('Go Together app starting');
 
 // Simple user storage for client-side auth
 const UserStorage = {
-    getUsers: function() {
+    getUsers() {
         return JSON.parse(localStorage.getItem('gotogether_users') || '[]');
     },
     
-    saveUser: function(user) {
+    saveUser(user) {
         const users = this.getUsers();
         users.push(user);
         localStorage.setItem('gotogether_users', JSON.stringify(users));
     },
     
-    findUser: function(email, password) {
+    findUser(email, password) {
         const users = this.getUsers();
         return users.find(u => u.email === email && u.password === password);
     },
     
-    userExists: function(email) {
+    userExists(email) {
         const users = this.getUsers();
         return users.some(u => u.email === email);
+    }
+};
+
+// Trip storage for managing trips
+const TripStorage = {
+    getAllTrips() {
+        return JSON.parse(localStorage.getItem('gotogether_trips') || '[]');
+    },
+
+    saveTrip(trip) {
+        const trips = this.getAllTrips();
+        const existingIndex = trips.findIndex(t => t.id === trip.id);
+        
+        if (existingIndex >= 0) {
+            trips[existingIndex] = trip;
+        } else {
+            trips.push(trip);
+        }
+        
+        localStorage.setItem('gotogether_trips', JSON.stringify(trips));
+        return trip;
+    },
+
+    createTrip(tripData) {
+        const trip = {
+            id: Date.now(),
+            name: tripData.name,
+            description: tripData.description || '',
+            location: tripData.location || '',
+            startDate: tripData.startDate,
+            endDate: tripData.endDate,
+            createdBy: tripData.createdBy,
+            members: [tripData.createdBy],
+            inviteCode: this.generateInviteCode(),
+            status: 'planning',
+            activities: [],
+            packingList: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        return this.saveTrip(trip);
+    },
+
+    getUserTrips(userId) {
+        const allTrips = this.getAllTrips();
+        return allTrips.filter(trip => 
+            trip.members.includes(userId) || trip.createdBy === userId
+        );
+    },
+
+    getTripByInviteCode(inviteCode) {
+        const trips = this.getAllTrips();
+        return trips.find(trip => trip.inviteCode === inviteCode.toUpperCase());
+    },
+
+    joinTrip(tripId, userId) {
+        const trip = this.getAllTrips().find(t => t.id === tripId);
+        if (trip && !trip.members.includes(userId)) {
+            trip.members.push(userId);
+            trip.updatedAt = new Date().toISOString();
+            return this.saveTrip(trip);
+        }
+        return trip;
+    },
+
+    generateInviteCode() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let result = '';
+        for (let i = 0; i < 6; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
     }
 };
 
@@ -192,6 +265,9 @@ function showDashboard(user) {
     // Set body background for dashboard
     document.body.style.background = '#f8fafc';
     
+    // Get user's trips
+    const userTrips = TripStorage.getUserTrips(user.id);
+    
     app.innerHTML = `
         <div style="min-height: 100vh; font-family: Arial, sans-serif;">
             <!-- Header -->
@@ -221,14 +297,14 @@ function showDashboard(user) {
                     <div style="background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
                         <h2 style="margin: 0 0 25px 0; color: #1a202c; font-size: 20px; font-weight: 600;">Quick Actions</h2>
                         <div style="display: flex; flex-direction: column; gap: 15px;">
-                            <button onclick="createTrip()" 
+                            <button onclick="showCreateTripForm()" 
                                     style="background: linear-gradient(135deg, #48bb78, #38a169); color: white; border: none; padding: 18px; border-radius: 12px; font-size: 16px; cursor: pointer; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px;"
                                     onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(72,187,120,0.3)'"
                                     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
                                 <span style="font-size: 20px;">🏕️</span>
                                 Create New Trip
                             </button>
-                            <button onclick="joinTrip()" 
+                            <button onclick="showJoinTripForm()" 
                                     style="background: linear-gradient(135deg, #4299e1, #3182ce); color: white; border: none; padding: 18px; border-radius: 12px; font-size: 16px; cursor: pointer; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px;"
                                     onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(66,153,225,0.3)'"
                                     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
@@ -236,22 +312,27 @@ function showDashboard(user) {
                                 Join Existing Trip
                             </button>
                             <button onclick="browseTrips()" 
-                                    style="background: linear-gradient(135deg, #9f7aea, #805ad5); color: white; border: none; padding: 18px; border-radius: 12px; font-size: 16px; cursor: pointer; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px;"
+                                    style="background: linear-gradient(135deg, #9f7aea, #805ad5); color: white; border: none; padding: 18px; border-radius: 12px; font-size: 16px; cursor: pointer; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; opacity: 0.6;"
                                     onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(159,122,234,0.3)'"
                                     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
                                 <span style="font-size: 20px;">🔍</span>
-                                Browse Public Trips
+                                Browse Public Trips (Soon)
                             </button>
                         </div>
                     </div>
                     
-                    <!-- Recent Activity -->
+                    <!-- Trip Stats -->
                     <div style="background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
-                        <h2 style="margin: 0 0 25px 0; color: #1a202c; font-size: 20px; font-weight: 600;">Recent Activity</h2>
-                        <div style="text-align: center; padding: 40px 20px; color: #718096;">
-                            <div style="font-size: 48px; margin-bottom: 15px;">📋</div>
-                            <p style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #4a5568;">No recent activity</p>
-                            <p style="margin: 0; font-size: 14px;">Create your first trip to get started!</p>
+                        <h2 style="margin: 0 0 25px 0; color: #1a202c; font-size: 20px; font-weight: 600;">Trip Statistics</h2>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div style="text-align: center; padding: 20px; background: #f0f9ff; border-radius: 12px;">
+                                <div style="font-size: 32px; font-weight: bold; color: #0369a1;">${userTrips.length}</div>
+                                <div style="font-size: 14px; color: #0369a1; font-weight: 600;">Total Trips</div>
+                            </div>
+                            <div style="text-align: center; padding: 20px; background: #f0fdf4; border-radius: 12px;">
+                                <div style="font-size: 32px; font-weight: bold; color: #15803d;">${userTrips.filter(t => t.status === 'planning').length}</div>
+                                <div style="font-size: 14px; color: #15803d; font-weight: 600;">Planning</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -261,19 +342,54 @@ function showDashboard(user) {
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
                         <h2 style="margin: 0; color: #1a202c; font-size: 20px; font-weight: 600;">Your Trips</h2>
                         <span style="background: #bee3f8; color: #2b6cb0; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">
-                            0 trips
+                            ${userTrips.length} trip${userTrips.length !== 1 ? 's' : ''}
                         </span>
                     </div>
-                    <div id="trips-container" style="text-align: center; padding: 60px 20px; color: #718096;">
-                        <div style="font-size: 64px; margin-bottom: 20px;">🎒</div>
-                        <h3 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 600; color: #4a5568;">No trips yet</h3>
-                        <p style="margin: 0 0 25px 0; font-size: 14px;">Create your first trip to start planning your adventure!</p>
-                        <button onclick="createTrip()" 
-                                style="background: linear-gradient(135deg, #1976d2, #1565c0); color: white; border: none; padding: 14px 28px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s;"
-                                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(25,118,210,0.3)'"
-                                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
-                            Create Your First Trip
-                        </button>
+                    <div id="trips-container">
+                        ${userTrips.length === 0 ? `
+                            <div style="text-align: center; padding: 60px 20px; color: #718096;">
+                                <div style="font-size: 64px; margin-bottom: 20px;">🎒</div>
+                                <h3 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 600; color: #4a5568;">No trips yet</h3>
+                                <p style="margin: 0 0 25px 0; font-size: 14px;">Create your first trip to start planning your adventure!</p>
+                                <button onclick="showCreateTripForm()" 
+                                        style="background: linear-gradient(135deg, #1976d2, #1565c0); color: white; border: none; padding: 14px 28px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s;"
+                                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(25,118,210,0.3)'"
+                                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                                    Create Your First Trip
+                                </button>
+                            </div>
+                        ` : `
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+                                ${userTrips.map(trip => `
+                                    <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;"
+                                         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.1)'"
+                                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.05)'"
+                                         onclick="viewTrip(${trip.id})">
+                                        <div style="display: flex; justify-between; align-items: start; margin-bottom: 15px;">
+                                            <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #1a202c;">${trip.name}</h3>
+                                            <span style="background: ${trip.status === 'planning' ? '#fef3c7' : '#d1fae5'}; color: ${trip.status === 'planning' ? '#92400e' : '#065f46'}; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                                                ${trip.status}
+                                            </span>
+                                        </div>
+                                        <div style="margin-bottom: 15px;">
+                                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: #6b7280; font-size: 14px;">
+                                                <span>📍</span>
+                                                <span>${trip.location || 'Location TBD'}</span>
+                                            </div>
+                                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: #6b7280; font-size: 14px;">
+                                                <span>📅</span>
+                                                <span>${formatDate(trip.startDate)} - ${formatDate(trip.endDate)}</span>
+                                            </div>
+                                            <div style="display: flex; align-items: center; gap: 8px; color: #6b7280; font-size: 14px;">
+                                                <span>👥</span>
+                                                <span>${trip.members.length} member${trip.members.length !== 1 ? 's' : ''}</span>
+                                            </div>
+                                        </div>
+                                        ${trip.description ? `<p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.4;">${trip.description}</p>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `}
                     </div>
                 </div>
             </div>
@@ -292,18 +408,369 @@ window.logout = function() {
     location.reload();
 };
 
-window.createTrip = function() {
-    const tripName = prompt('Enter a name for your new trip:');
-    if (tripName && tripName.trim()) {
-        alert('Trip "' + tripName.trim() + '" created! Full trip management features coming soon.');
-    }
+// Helper function to format dates
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
+}
+
+// Show create trip form
+window.showCreateTripForm = function() {
+    const app = document.getElementById('app');
+    
+    app.innerHTML = `
+        <div style="min-height: 100vh; background: #f8fafc; padding: 20px; font-family: Arial, sans-serif;">
+            <div style="max-width: 600px; margin: 0 auto;">
+                <!-- Header -->
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 30px;">
+                    <button onclick="showDashboard(JSON.parse(localStorage.getItem('gotogether_user')))" 
+                            style="background: #e5e7eb; border: none; padding: 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                        <span style="font-size: 18px;">←</span>
+                    </button>
+                    <div>
+                        <h1 style="margin: 0; font-size: 24px; color: #1a202c;">Create New Trip</h1>
+                        <p style="margin: 0; color: #6b7280; font-size: 14px;">Plan your next adventure</p>
+                    </div>
+                </div>
+
+                <!-- Form -->
+                <div style="background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                    <form id="create-trip-form">
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Trip Name *</label>
+                            <input type="text" name="name" required 
+                                   placeholder="e.g., Yosemite Weekend Adventure"
+                                   style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; box-sizing: border-box;"
+                                   onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e5e7eb'">
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Location *</label>
+                            <input type="text" name="location" required 
+                                   placeholder="e.g., Yosemite National Park, CA"
+                                   style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; box-sizing: border-box;"
+                                   onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e5e7eb'">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                            <div>
+                                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Start Date *</label>
+                                <input type="date" name="startDate" required 
+                                       style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; box-sizing: border-box;"
+                                       onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e5e7eb'">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">End Date *</label>
+                                <input type="date" name="endDate" required 
+                                       style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; box-sizing: border-box;"
+                                       onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e5e7eb'">
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 25px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Description (Optional)</label>
+                            <textarea name="description" rows="3" 
+                                      placeholder="Tell your group what to expect on this trip..."
+                                      style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; resize: vertical; box-sizing: border-box;"
+                                      onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e5e7eb'"></textarea>
+                        </div>
+
+                        <div id="create-trip-error" style="display: none; background: #fef2f2; color: #dc2626; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;"></div>
+
+                        <div style="display: flex; gap: 15px; justify-content: end;">
+                            <button type="button" onclick="showDashboard(JSON.parse(localStorage.getItem('gotogether_user')))"
+                                    style="background: #f3f4f6; color: #374151; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                                Cancel
+                            </button>
+                            <button type="submit" 
+                                    style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                                Create Trip
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tips -->
+                <div style="background: linear-gradient(135deg, #dbeafe, #bfdbfe); padding: 20px; border-radius: 12px; margin-top: 20px; border: 1px solid #93c5fd;">
+                    <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 16px;">💡 Pro Tips</h3>
+                    <ul style="margin: 0; padding-left: 20px; color: #1e40af; font-size: 14px;">
+                        <li>Choose a descriptive name that gets everyone excited</li>
+                        <li>Include specific location details for easy navigation</li>
+                        <li>Add buffer time for travel and setup</li>
+                        <li>You can always edit these details later</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Add form handler
+    document.getElementById('create-trip-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        handleCreateTrip(new FormData(e.target));
+    });
 };
 
-window.joinTrip = function() {
-    const tripCode = prompt('Enter the trip invitation code:');
-    if (tripCode && tripCode.trim()) {
-        alert('Joining trip with code: ' + tripCode.trim() + '\nFull trip joining features coming soon.');
+// Handle trip creation
+function handleCreateTrip(formData) {
+    const user = JSON.parse(localStorage.getItem('gotogether_user'));
+    const name = formData.get('name').trim();
+    const location = formData.get('location').trim();
+    const startDate = formData.get('startDate');
+    const endDate = formData.get('endDate');
+    const description = formData.get('description').trim();
+
+    // Validation
+    if (!name || !location || !startDate || !endDate) {
+        showCreateTripError('Please fill in all required fields');
+        return;
     }
+
+    if (new Date(startDate) > new Date(endDate)) {
+        showCreateTripError('End date must be after start date');
+        return;
+    }
+
+    if (new Date(startDate) < new Date()) {
+        showCreateTripError('Start date cannot be in the past');
+        return;
+    }
+
+    // Create trip
+    const trip = TripStorage.createTrip({
+        name,
+        location,
+        startDate,
+        endDate,
+        description,
+        createdBy: user.id
+    });
+
+    // Show success and redirect to trip view
+    alert(`Trip "${trip.name}" created successfully! Invite code: ${trip.inviteCode}`);
+    viewTrip(trip.id);
+}
+
+function showCreateTripError(message) {
+    const errorDiv = document.getElementById('create-trip-error');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+// Show join trip form
+window.showJoinTripForm = function() {
+    const app = document.getElementById('app');
+    
+    app.innerHTML = `
+        <div style="min-height: 100vh; background: #f8fafc; padding: 20px; font-family: Arial, sans-serif; display: flex; align-items: center; justify-content: center;">
+            <div style="max-width: 400px; width: 100%;">
+                <div style="background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                    <div style="text-align: center; margin-bottom: 25px;">
+                        <h1 style="margin: 0 0 10px 0; font-size: 24px; color: #1a202c;">Join a Trip</h1>
+                        <p style="margin: 0; color: #6b7280; font-size: 14px;">Enter the invite code shared by your trip organizer</p>
+                    </div>
+
+                    <form id="join-trip-form">
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Invite Code</label>
+                            <input type="text" name="inviteCode" required 
+                                   placeholder="e.g., ABC123"
+                                   maxlength="6"
+                                   style="width: 100%; padding: 15px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 18px; text-align: center; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; box-sizing: border-box;"
+                                   onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e5e7eb'"
+                                   oninput="this.value = this.value.toUpperCase()">
+                            <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 12px;">Invite codes are 6 characters long</p>
+                        </div>
+
+                        <div id="join-trip-error" style="display: none; background: #fef2f2; color: #dc2626; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;"></div>
+
+                        <div style="display: flex; gap: 15px;">
+                            <button type="button" onclick="showDashboard(JSON.parse(localStorage.getItem('gotogether_user')))"
+                                    style="flex: 1; background: #f3f4f6; color: #374151; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                                Cancel
+                            </button>
+                            <button type="submit" 
+                                    style="flex: 1; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                                Join Trip
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Add form handler
+    document.getElementById('join-trip-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        handleJoinTrip(new FormData(e.target));
+    });
+};
+
+// Handle joining trip
+function handleJoinTrip(formData) {
+    const user = JSON.parse(localStorage.getItem('gotogether_user'));
+    const inviteCode = formData.get('inviteCode').trim().toUpperCase();
+
+    if (!inviteCode) {
+        showJoinTripError('Please enter an invite code');
+        return;
+    }
+
+    const trip = TripStorage.getTripByInviteCode(inviteCode);
+    
+    if (!trip) {
+        showJoinTripError('Invalid invite code. Please check and try again.');
+        return;
+    }
+
+    if (trip.members.includes(user.id)) {
+        showJoinTripError('You are already a member of this trip');
+        return;
+    }
+
+    // Join the trip
+    TripStorage.joinTrip(trip.id, user.id);
+    
+    alert(`Successfully joined "${trip.name}"!`);
+    viewTrip(trip.id);
+}
+
+function showJoinTripError(message) {
+    const errorDiv = document.getElementById('join-trip-error');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+// View trip details
+window.viewTrip = function(tripId) {
+    const trip = TripStorage.getAllTrips().find(t => t.id === tripId);
+    const user = JSON.parse(localStorage.getItem('gotogether_user'));
+    
+    if (!trip) {
+        alert('Trip not found');
+        return;
+    }
+
+    const app = document.getElementById('app');
+    
+    app.innerHTML = `
+        <div style="min-height: 100vh; background: #f8fafc; padding: 20px; font-family: Arial, sans-serif;">
+            <div style="max-width: 800px; margin: 0 auto;">
+                <!-- Header -->
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 30px;">
+                    <button onclick="showDashboard(JSON.parse(localStorage.getItem('gotogether_user')))" 
+                            style="background: #e5e7eb; border: none; padding: 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                        <span style="font-size: 18px;">←</span>
+                    </button>
+                    <div style="flex: 1;">
+                        <h1 style="margin: 0; font-size: 24px; color: #1a202c;">${trip.name}</h1>
+                        <div style="display: flex; align-items: center; gap: 20px; margin-top: 5px; color: #6b7280; font-size: 14px;">
+                            <span>📍 ${trip.location}</span>
+                            <span>📅 ${formatDate(trip.startDate)} - ${formatDate(trip.endDate)}</span>
+                            <span>👥 ${trip.members.length} member${trip.members.length !== 1 ? 's' : ''}</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="background: ${trip.status === 'planning' ? '#fef3c7' : '#d1fae5'}; color: ${trip.status === 'planning' ? '#92400e' : '#065f46'}; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                            ${trip.status}
+                        </span>
+                        <button onclick="shareTrip('${trip.inviteCode}')" 
+                                style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                            Share
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Trip Overview -->
+                <div style="background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px;">
+                    ${trip.description ? `
+                        <h3 style="margin: 0 0 15px 0; color: #1a202c; font-size: 18px;">About this trip</h3>
+                        <p style="margin: 0 0 20px 0; color: #6b7280; line-height: 1.6;">${trip.description}</p>
+                    ` : ''}
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px;">
+                        <div style="text-align: center; padding: 15px; background: #f0f9ff; border-radius: 12px;">
+                            <div style="font-size: 24px; font-weight: bold; color: #0369a1;">${Math.ceil((new Date(trip.endDate) - new Date(trip.startDate)) / (1000 * 60 * 60 * 24)) + 1}</div>
+                            <div style="font-size: 12px; color: #0369a1; font-weight: 600;">Days</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: #f0fdf4; border-radius: 12px;">
+                            <div style="font-size: 24px; font-weight: bold; color: #15803d;">${trip.activities.length}</div>
+                            <div style="font-size: 12px; color: #15803d; font-weight: 600;">Activities</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: #fef3c7; border-radius: 12px;">
+                            <div style="font-size: 24px; font-weight: bold; color: #92400e;">${trip.packingList.length}</div>
+                            <div style="font-size: 12px; color: #92400e; font-weight: 600;">Packing Items</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Members & Invite -->
+                <div style="background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 20px 0; color: #1a202c; font-size: 18px;">Trip Members</h3>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; gap: 15px; padding: 15px; background: #f9fafb; border-radius: 12px;">
+                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #1976d2, #1565c0); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                                ${user.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #1a202c;">${user.name}</div>
+                                <div style="font-size: 12px; color: #6b7280;">${trip.createdBy === user.id ? 'Trip Organizer' : 'Member'}</div>
+                            </div>
+                            <span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 600;">You</span>
+                        </div>
+                    </div>
+
+                    <div style="background: #dbeafe; padding: 20px; border-radius: 12px; border: 1px solid #93c5fd;">
+                        <h4 style="margin: 0 0 10px 0; color: #1e40af; font-size: 16px;">Invite Others</h4>
+                        <p style="margin: 0 0 15px 0; color: #1e40af; font-size: 14px;">Share this code with friends:</p>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <code style="background: white; padding: 10px 15px; border-radius: 8px; font-size: 18px; font-weight: bold; color: #1e40af; letter-spacing: 2px;">
+                                ${trip.inviteCode}
+                            </code>
+                            <button onclick="shareTrip('${trip.inviteCode}')" 
+                                    style="background: #3b82f6; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div style="background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
+                        <div style="font-size: 32px; margin-bottom: 10px;">🎯</div>
+                        <h4 style="margin: 0 0 10px 0; color: #1a202c;">Activities</h4>
+                        <p style="margin: 0 0 15px 0; color: #6b7280; font-size: 14px;">Plan what you'll do</p>
+                        <button style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                            Manage Activities
+                        </button>
+                    </div>
+                    <div style="background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
+                        <div style="font-size: 32px; margin-bottom: 10px;">🎒</div>
+                        <h4 style="margin: 0 0 10px 0; color: #1a202c;">Packing List</h4>
+                        <p style="margin: 0 0 15px 0; color: #6b7280; font-size: 14px;">What to bring</p>
+                        <button style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                            Manage Packing
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+// Share trip function
+window.shareTrip = function(inviteCode) {
+    navigator.clipboard.writeText(inviteCode).then(() => {
+        alert('Invite code copied to clipboard!');
+    }).catch(() => {
+        prompt('Copy this invite code:', inviteCode);
+    });
 };
 
 window.browseTrips = function() {
