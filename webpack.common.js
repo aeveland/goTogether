@@ -13,8 +13,18 @@ module.exports = {
   module: {
     rules: [
       {
+        test: /\.(js|jsx)$/,
+        exclude: /node_modules/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: ['@babel/preset-react']
+          }
+        }
+      },
+      {
         test: /\.css$/i,
-        use: ['style-loader', 'css-loader']
+        use: ['style-loader', 'css-loader', 'postcss-loader']
       },
       {
         test: /\.(png|svg|jpg|jpeg|gif|ico)$/i,
@@ -44,6 +54,7 @@ module.exports = {
     })
   ],
   resolve: {
+    extensions: ['.js', '.jsx'],
     alias: {
       '@': path.resolve(__dirname, 'client/src')
     }
