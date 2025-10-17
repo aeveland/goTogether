@@ -1,3 +1,36 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Ensure Hero UI components render properly */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #f8fafc;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+/* Fix any Hero UI component issues */
+[data-slot="base"] {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure buttons and cards have proper styling */
+button {
+  cursor: pointer;
+}
+
+.hero-ui-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
