@@ -76,7 +76,7 @@ export class LoginPage {
                         <label class="mdc-text-field mdc-text-field--filled" style="width: 100%;">
                             <span class="mdc-text-field__ripple"></span>
                             <span class="mdc-floating-label" id="email-label">Email</span>
-                            <input class="mdc-text-field__input" type="email" id="email" name="email" required>
+                            <input class="mdc-text-field__input" type="text" id="email" name="email" required>
                             <span class="mdc-line-ripple"></span>
                         </label>
                     </div>
@@ -248,11 +248,18 @@ export class LoginPage {
     async handleLogin(data) {
         const { email, password } = data;
         
+        console.log('Login attempt with:', { email, password: password ? '***' : 'empty' });
+        
         if (!email || !password) {
             throw new Error('Please fill in all fields');
         }
 
-        await this.authService.login(email, password);
+        // Basic email validation (more lenient than HTML5)
+        if (!email.includes('@') || !email.includes('.')) {
+            throw new Error('Please enter a valid email address');
+        }
+
+        await this.authService.login(email.trim(), password);
         
         // Redirect to dashboard on successful login
         if (window.goTogetherRouter) {
@@ -287,7 +294,7 @@ export class LoginPage {
 
         // Check password complexity
         if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
-            throw new Error('Password must contain at least one lowercase letter, one uppercase letter, and one number (e.g., "MyPass123")');
+            throw new Error('Password must contain at least one lowercase letter, one uppercase letter, and one number. Example: "MyPass123"');
         }
 
         const userData = {
