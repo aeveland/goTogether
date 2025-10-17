@@ -691,7 +691,7 @@ window.viewTrip = function(tripId) {
             <div style="max-width: 800px; margin: 0 auto;">
                 <!-- Header -->
                 <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 30px;">
-                    <button onclick="showDashboard(JSON.parse(localStorage.getItem('gotogether_user')))" 
+                    <button id="trip-back-btn"
                             style="background: #e5e7eb; border: none; padding: 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                         <i class="material-icons" style="font-size: 20px;">arrow_back</i>
                     </button>
@@ -775,7 +775,7 @@ window.viewTrip = function(tripId) {
                         <i class="material-icons" style="font-size: 48px; margin-bottom: 10px; color: #10b981;">local_activity</i>
                         <h4 style="margin: 0 0 10px 0; color: #1a202c;">Activities</h4>
                         <p style="margin: 0 0 15px 0; color: #6b7280; font-size: 14px;">Plan what you'll do</p>
-                        <button style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <button id="manage-activities-btn" style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">
                             Manage Activities
                         </button>
                     </div>
@@ -796,6 +796,19 @@ window.viewTrip = function(tripId) {
             </div>
         </div>
     `;
+    
+    // Add back button event listener
+    document.getElementById('trip-back-btn').addEventListener('click', function() {
+        console.log('Trip back button clicked');
+        const user = JSON.parse(localStorage.getItem('gotogether_user'));
+        showDashboard(user);
+    });
+    
+    // Add manage activities button event listener
+    document.getElementById('manage-activities-btn').addEventListener('click', function() {
+        console.log('Manage activities clicked');
+        showActivityManager(trip.id);
+    });
 };
 
 // Share trip function
@@ -809,4 +822,163 @@ window.shareTrip = function(inviteCode) {
 
 window.browseTrips = function() {
     alert('Browse public trips feature coming soon!');
+};
+
+// Show activity manager
+window.showActivityManager = function(tripId) {
+    const trip = TripStorage.getAllTrips().find(t => t.id === tripId);
+    const user = JSON.parse(localStorage.getItem('gotogether_user'));
+    
+    if (!trip) {
+        alert('Trip not found');
+        return;
+    }
+
+    const app = document.getElementById('app');
+    
+    app.innerHTML = `
+        <div style="min-height: 100vh; background: #f8fafc; padding: 20px; font-family: Arial, sans-serif;">
+            <div style="max-width: 800px; margin: 0 auto;">
+                <!-- Header -->
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 30px;">
+                    <button id="activities-back-btn"
+                            style="background: #e5e7eb; border: none; padding: 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                        <i class="material-icons" style="font-size: 20px;">arrow_back</i>
+                    </button>
+                    <div>
+                        <h1 style="margin: 0; font-size: 24px; color: #1a202c;">Manage Activities</h1>
+                        <p style="margin: 0; color: #6b7280; font-size: 14px;">${trip.name}</p>
+                    </div>
+                </div>
+
+                <!-- Add Activity Form -->
+                <div style="background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 20px 0; color: #1a202c; font-size: 18px; display: flex; align-items: center; gap: 10px;">
+                        <i class="material-icons" style="color: #10b981;">add_circle</i>
+                        Add New Activity
+                    </h3>
+                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: end;">
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">Activity Name</label>
+                            <input type="text" id="activity-input" placeholder="e.g., Hiking to Yosemite Falls"
+                                   style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; box-sizing: border-box;"
+                                   onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='#e5e7eb'">
+                        </div>
+                        <button id="add-activity-btn" onclick="console.log('Button clicked directly'); addActivity(${tripId})"
+                                style="background: #10b981; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                            <i class="material-icons" style="font-size: 18px;">add</i>
+                            Add Activity
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Activities List -->
+                <div style="background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                    <h3 style="margin: 0 0 20px 0; color: #1a202c; font-size: 18px; display: flex; align-items: center; gap: 10px;">
+                        <i class="material-icons" style="color: #10b981;">local_activity</i>
+                        Trip Activities (${trip.activities ? trip.activities.length : 0})
+                    </h3>
+                    
+                    <div id="activities-list">
+                        ${trip.activities && trip.activities.length > 0 ? 
+                            trip.activities.map((activity, index) => `
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 15px; background: #f9fafb; border-radius: 12px; margin-bottom: 10px; border-left: 4px solid #10b981;">
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 600; color: #1a202c; margin-bottom: 4px;">${activity.name || activity}</div>
+                                        <div style="font-size: 12px; color: #6b7280;">
+                                            Added ${activity.createdAt ? formatDate(activity.createdAt) : 'recently'}
+                                        </div>
+                                    </div>
+                                    <button onclick="deleteActivity(${tripId}, ${activity.id || index})" 
+                                            style="background: #fee2e2; color: #dc2626; border: none; padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;"
+                                            onmouseover="this.style.backgroundColor='#fecaca'" onmouseout="this.style.backgroundColor='#fee2e2'">
+                                        <i class="material-icons" style="font-size: 16px;">delete</i>
+                                    </button>
+                                </div>
+                            `).join('') 
+                        : `
+                            <div style="text-align: center; padding: 40px 20px; color: #6b7280;">
+                                <i class="material-icons" style="font-size: 48px; margin-bottom: 15px; color: #9ca3af;">event_available</i>
+                                <h4 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 600; color: #4a5568;">No activities yet</h4>
+                                <p style="margin: 0; font-size: 14px;">Add some activities to make your trip more exciting!</p>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Add event listeners
+    document.getElementById('activities-back-btn').addEventListener('click', function() {
+        viewTrip(tripId);
+    });
+    
+    document.getElementById('add-activity-btn').addEventListener('click', function() {
+        console.log('Add activity button clicked');
+        addActivity(tripId);
+    });
+    
+    // Allow Enter key to add activity
+    document.getElementById('activity-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            addActivity(tripId);
+        }
+    });
+};
+
+// Add activity function
+window.addActivity = function(tripId) {
+    alert('addActivity function called! TripId: ' + tripId);
+    console.log('addActivity function called with tripId:', tripId);
+    
+    const input = document.getElementById('activity-input');
+    if (!input) {
+        alert('Activity input not found!');
+        console.error('Activity input not found');
+        return;
+    }
+    
+    const activityName = input.value.trim();
+    console.log('Activity name:', activityName);
+    
+    if (!activityName) {
+        alert('Please enter an activity name');
+        return;
+    }
+    
+    alert('About to add activity: ' + activityName);
+    console.log('Adding activity:', activityName, 'to trip:', tripId);
+    
+    // Add activity to trip
+    const success = TripStorage.addActivity(tripId, {
+        name: activityName,
+        createdBy: JSON.parse(localStorage.getItem('gotogether_user')).id
+    });
+    
+    console.log('Add activity result:', success);
+    alert('Add activity result: ' + (success ? 'SUCCESS' : 'FAILED'));
+    
+    if (success) {
+        // Clear input and refresh the activity manager
+        input.value = '';
+        showActivityManager(tripId);
+    } else {
+        alert('Failed to add activity. Please try again.');
+    }
+};
+
+// Delete activity function
+window.deleteActivity = function(tripId, activityId) {
+    if (confirm('Are you sure you want to delete this activity?')) {
+        console.log('Deleting activity:', activityId, 'from trip:', tripId);
+        
+        const success = TripStorage.deleteActivity(tripId, activityId);
+        
+        if (success) {
+            showActivityManager(tripId);
+        } else {
+            alert('Failed to delete activity. Please try again.');
+        }
+    }
 };

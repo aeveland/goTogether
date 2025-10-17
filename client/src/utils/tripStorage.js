@@ -82,6 +82,22 @@ export const TripStorage = {
     return null;
   },
 
+  deleteActivity(tripId, activityId) {
+    const trip = this.getTripById(tripId);
+    if (trip && trip.activities) {
+      const initialLength = trip.activities.length;
+      trip.activities = trip.activities.filter(activity => 
+        (activity.id || trip.activities.indexOf(activity)) !== activityId
+      );
+      
+      if (trip.activities.length < initialLength) {
+        trip.updatedAt = new Date().toISOString();
+        return this.saveTrip(trip);
+      }
+    }
+    return null;
+  },
+
   addShoppingItem(tripId, item) {
     const trip = this.getTripById(tripId);
     if (trip) {
