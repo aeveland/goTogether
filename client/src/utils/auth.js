@@ -2,12 +2,18 @@
  * Authentication service for managing user login/logout and token handling
  */
 import config from '../config.js';
+import { MockApiService } from './mock-api.js';
 
 export class AuthService {
     constructor() {
         this.tokenKey = 'gotogether_token';
         this.userKey = 'gotogether_user';
         this.baseUrl = config.API_BASE_URL;
+        
+        // Use mock API for demo deployments
+        if (config.API_BASE_URL === '/api/mock') {
+            this.mockApi = new MockApiService();
+        }
     }
 
     /**
@@ -18,6 +24,19 @@ export class AuthService {
      */
     async login(email, password) {
         try {
+            // Use mock API for demo mode
+            if (this.mockApi) {
+                console.log('Using mock API for login');
+                const data = await this.mockApi.login(email, password);
+                
+                // Store token and user data
+                this.setToken(data.data.token);
+                this.setUser(data.data.user);
+                
+                return data;
+            }
+            
+            // Regular API call for production
             const response = await fetch(`${this.baseUrl}/auth/login`, {
                 method: 'POST',
                 headers: {
@@ -101,6 +120,14 @@ export class AuthService {
         }
 
         try {
+            // Use mock API for demo mode
+            if (this.mockApi) {
+                console.log('Using mock API for auth verification');
+                const isAuth = await this.mockApi.isAuthenticated();
+                console.log('Mock auth result:', isAuth);
+                return isAuth;
+            }
+            
             // Verify token with server
             const response = await fetch(`${this.baseUrl}/auth/verify`, {
                 method: 'GET',
