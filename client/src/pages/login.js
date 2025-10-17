@@ -40,13 +40,6 @@ export class LoginPage {
                         }
                     </p>
                     ${config.API_BASE_URL === '/api/mock' ? `
-                        <div class="mdc-card demo-banner" style="background-color: #e3f2fd; border-left: 4px solid #1976d2; margin-bottom: 16px;">
-                            <div class="mdc-card__content">
-                                <p class="mdc-typography--body2" style="color: #1976d2; margin: 0;">
-                                    <strong>🎯 Demo Mode:</strong> Try logging in with <code>demo@example.com</code> / <code>Demo123</code>
-                                </p>
-                            </div>
-                        </div>
                     ` : ''}
                 </div>
 
@@ -91,7 +84,7 @@ export class LoginPage {
                         ${!this.isLoginMode ? `
                             <div class="mdc-text-field-helper-line">
                                 <div class="mdc-text-field-helper-text" style="font-size: 0.75rem; color: #666; margin-top: 4px;">
-                                    Must contain uppercase, lowercase, and number (e.g., "MyPass123")
+                                    Must be at least 6 characters
                                 </div>
                             </div>
                         ` : ''}
@@ -236,6 +229,12 @@ export class LoginPage {
                 await this.handleSignup(data);
             }
         } catch (error) {
+            console.error('Form submission error:', error);
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            });
             this.showError(error.message);
         } finally {
             this.setLoading(false);
