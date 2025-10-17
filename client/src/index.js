@@ -361,31 +361,41 @@ function showDashboard(user) {
                         ` : `
                             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
                                 ${userTrips.map(trip => `
-                                    <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;"
+                                    <div style="border: 1px solid #e2e8f0; border-radius: 12px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; overflow: hidden;"
                                          onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.1)'"
                                          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.05)'"
                                          onclick="viewTrip(${trip.id})">
-                                        <div style="display: flex; justify-between; align-items: start; margin-bottom: 15px;">
-                                            <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #1a202c;">${trip.name}</h3>
-                                            <span style="background: ${trip.status === 'planning' ? '#fef3c7' : '#d1fae5'}; color: ${trip.status === 'planning' ? '#92400e' : '#065f46'}; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">
-                                                ${trip.status}
-                                            </span>
+                                        ${trip.locationData && trip.locationData.lat && trip.locationData.lng ? `
+                                            <div style="height: 120px; background-image: url('${generateMapThumbnail(trip.locationData.lat, trip.locationData.lng, 400, 120)}'); background-size: cover; background-position: center; position: relative;">
+                                                <div style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                                                    <i class="material-icons" style="font-size: 12px; margin-right: 2px;">place</i>
+                                                    MAP
+                                                </div>
+                                            </div>
+                                        ` : ''}
+                                        <div style="padding: 20px;">
+                                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                                                <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #1a202c;">${trip.name}</h3>
+                                                <span style="background: ${trip.status === 'planning' ? '#fef3c7' : '#d1fae5'}; color: ${trip.status === 'planning' ? '#92400e' : '#065f46'}; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                                                    ${trip.status}
+                                                </span>
+                                            </div>
+                                            <div style="margin-bottom: 15px;">
+                                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: #6b7280; font-size: 14px;">
+                                                    <i class="material-icons" style="font-size: 16px;">place</i>
+                                                    <span>${trip.location || 'Location TBD'}</span>
+                                                </div>
+                                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: #6b7280; font-size: 14px;">
+                                                    <i class="material-icons" style="font-size: 16px;">event</i>
+                                                    <span>${formatDate(trip.startDate)} - ${formatDate(trip.endDate)}</span>
+                                                </div>
+                                                <div style="display: flex; align-items: center; gap: 8px; color: #6b7280; font-size: 14px;">
+                                                    <i class="material-icons" style="font-size: 16px;">group</i>
+                                                    <span>${trip.members.length} member${trip.members.length !== 1 ? 's' : ''}</span>
+                                                </div>
+                                            </div>
+                                            ${trip.description ? `<p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.4;">${trip.description}</p>` : ''}
                                         </div>
-                                        <div style="margin-bottom: 15px;">
-                                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: #6b7280; font-size: 14px;">
-                                                <i class="material-icons" style="font-size: 16px;">place</i>
-                                                <span>${trip.location || 'Location TBD'}</span>
-                                            </div>
-                                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: #6b7280; font-size: 14px;">
-                                                <i class="material-icons" style="font-size: 16px;">event</i>
-                                                <span>${formatDate(trip.startDate)} - ${formatDate(trip.endDate)}</span>
-                                            </div>
-                                            <div style="display: flex; align-items: center; gap: 8px; color: #6b7280; font-size: 14px;">
-                                                <i class="material-icons" style="font-size: 16px;">group</i>
-                                                <span>${trip.members.length} member${trip.members.length !== 1 ? 's' : ''}</span>
-                                            </div>
-                                        </div>
-                                        ${trip.description ? `<p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.4;">${trip.description}</p>` : ''}
                                     </div>
                                 `).join('')}
                             </div>
@@ -443,10 +453,14 @@ window.showCreateTripForm = function() {
 
                         <div style="margin-bottom: 20px;">
                             <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Location *</label>
-                            <input type="text" name="location" required 
-                                   placeholder="e.g., Yosemite National Park, CA"
+                            <input type="text" name="location" id="location-input" required 
+                                   placeholder="Search for a location..."
                                    style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; box-sizing: border-box;"
                                    onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e5e7eb'">
+                            <div style="font-size: 12px; color: #6b7280; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                                <i class="material-icons" style="font-size: 14px;">place</i>
+                                Start typing to search for places
+                            </div>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
@@ -514,6 +528,16 @@ window.showCreateTripForm = function() {
         const formData = new FormData(form);
         handleCreateTrip(formData);
     });
+    
+    // Initialize Google Places Autocomplete
+    if (window.google && window.google.maps) {
+        initializeLocationAutocomplete();
+    } else {
+        // Wait for Google Maps to load
+        window.addEventListener('load', function() {
+            setTimeout(initializeLocationAutocomplete, 1000);
+        });
+    }
 };
 
 // Handle trip creation
@@ -548,10 +572,25 @@ function handleCreateTrip(formData) {
     //     return;
     // }
 
-    // Create trip
+    // Create trip with location data
+    const locationData = selectedPlaceData ? {
+        address: selectedPlaceData.formattedAddress,
+        name: selectedPlaceData.name,
+        lat: selectedPlaceData.lat,
+        lng: selectedPlaceData.lng,
+        placeId: selectedPlaceData.placeId
+    } : {
+        address: location,
+        name: location,
+        lat: null,
+        lng: null,
+        placeId: null
+    };
+    
     const trip = TripStorage.createTrip({
         name,
-        location,
+        location: locationData.address,
+        locationData: locationData,
         startDate,
         endDate,
         description,
@@ -823,6 +862,47 @@ window.shareTrip = function(inviteCode) {
 window.browseTrips = function() {
     alert('Browse public trips feature coming soon!');
 };
+
+// Global variable to store selected place data
+let selectedPlaceData = null;
+
+// Initialize Google Places Autocomplete
+function initializeLocationAutocomplete() {
+    const locationInput = document.getElementById('location-input');
+    if (!locationInput || !window.google) return;
+    
+    const autocomplete = new google.maps.places.Autocomplete(locationInput, {
+        types: ['establishment', 'geocode'],
+        fields: ['place_id', 'formatted_address', 'name', 'geometry', 'photos']
+    });
+    
+    autocomplete.addListener('place_changed', function() {
+        const place = autocomplete.getPlace();
+        
+        if (!place.geometry) {
+            console.log('No geometry found for place');
+            return;
+        }
+        
+        // Store the selected place data globally
+        selectedPlaceData = {
+            placeId: place.place_id,
+            formattedAddress: place.formatted_address,
+            name: place.name,
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+            photos: place.photos ? place.photos.slice(0, 1) : null
+        };
+        
+        console.log('Selected place:', selectedPlaceData);
+    });
+}
+
+// Generate Google Static Maps URL
+function generateMapThumbnail(lat, lng, width = 300, height = 200) {
+    const apiKey = 'AIzaSyBOti4mM-6x9WDnZIjIeyEU21OpBXqWBgw';
+    return `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=13&size=${width}x${height}&maptype=roadmap&markers=color:red%7C${lat},${lng}&key=${apiKey}`;
+}
 
 // Show activity manager
 window.showActivityManager = function(tripId) {
