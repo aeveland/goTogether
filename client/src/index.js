@@ -597,11 +597,11 @@ window.showJoinTripForm = function() {
                         <div id="join-trip-error" style="display: none; background: #fef2f2; color: #dc2626; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;"></div>
 
                         <div style="display: flex; gap: 15px;">
-                            <button type="button" onclick="showDashboard(JSON.parse(localStorage.getItem('gotogether_user')))"
+                            <button type="button" id="join-cancel-btn"
                                     style="flex: 1; background: #f3f4f6; color: #374151; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: 600;">
                                 Cancel
                             </button>
-                            <button type="submit" 
+                            <button type="button" id="join-submit-btn"
                                     style="flex: 1; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: 600;">
                                 Join Trip
                             </button>
@@ -612,40 +612,60 @@ window.showJoinTripForm = function() {
         </div>
     `;
 
-    // Add form handler
-    document.getElementById('join-trip-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        handleJoinTrip(new FormData(e.target));
+    // Add button event listeners
+    document.getElementById('join-cancel-btn').addEventListener('click', function() {
+        console.log('Join trip cancel clicked');
+        const user = JSON.parse(localStorage.getItem('gotogether_user'));
+        showDashboard(user);
+    });
+    
+    document.getElementById('join-submit-btn').addEventListener('click', function() {
+        console.log('Join trip submit clicked');
+        const form = document.getElementById('join-trip-form');
+        const formData = new FormData(form);
+        handleJoinTrip(formData);
     });
 };
 
 // Handle joining trip
 function handleJoinTrip(formData) {
+    console.log('handleJoinTrip called');
     const user = JSON.parse(localStorage.getItem('gotogether_user'));
     const inviteCode = formData.get('inviteCode').trim().toUpperCase();
+    
+    console.log('Join trip data:', { inviteCode, userId: user.id });
 
     if (!inviteCode) {
+        console.log('No invite code provided');
         showJoinTripError('Please enter an invite code');
         return;
     }
 
     const trip = TripStorage.getTripByInviteCode(inviteCode);
+    console.log('Found trip:', trip);
     
     if (!trip) {
+        console.log('Trip not found for code:', inviteCode);
         showJoinTripError('Invalid invite code. Please check and try again.');
         return;
     }
 
     if (trip.members.includes(user.id)) {
+        console.log('User already member of trip');
         showJoinTripError('You are already a member of this trip');
         return;
     }
 
     // Join the trip
-    TripStorage.joinTrip(trip.id, user.id);
+    console.log('Joining trip...');
+    const updatedTrip = TripStorage.joinTrip(trip.id, user.id);
     
-    alert(`Successfully joined "${trip.name}"!`);
-    viewTrip(trip.id);
+    if (updatedTrip) {
+        alert(`Successfully joined "${trip.name}"!`);
+        viewTrip(trip.id);
+    } else {
+        showJoinTripError('Failed to join trip. Please try again.');
+    }
 }
 
 function showJoinTripError(message) {
