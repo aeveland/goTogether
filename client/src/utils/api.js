@@ -3,11 +3,18 @@
  * Handles authentication headers and error responses
  */
 import { AuthService } from './auth.js';
+import { MockApiService } from './mock-api.js';
+import config from '../config.js';
 
 export class ApiService {
     constructor() {
-        this.baseUrl = '/api';
+        this.baseUrl = config.API_BASE_URL;
         this.authService = new AuthService();
+        
+        // Use mock API for demo deployments
+        if (config.API_BASE_URL === '/api/mock') {
+            return new MockApiService();
+        }
     }
 
     /**

@@ -3,6 +3,7 @@
  * Handles user authentication (login and registration)
  */
 import { AuthService } from '../utils/auth.js';
+import config from '../config.js';
 
 export class LoginPage {
     constructor(props = {}) {
@@ -38,6 +39,15 @@ export class LoginPage {
                             : 'Create an account to start planning trips with friends'
                         }
                     </p>
+                    ${config.API_BASE_URL === '/api/mock' ? `
+                        <div class="mdc-card demo-banner" style="background-color: #e3f2fd; border-left: 4px solid #1976d2; margin-bottom: 16px;">
+                            <div class="mdc-card__content">
+                                <p class="mdc-typography--body2" style="color: #1976d2; margin: 0;">
+                                    <strong>🎯 Demo Mode:</strong> Try logging in with <code>demo@example.com</code> / <code>Demo123</code>
+                                </p>
+                            </div>
+                        </div>
+                    ` : ''}
                 </div>
 
                 <!-- Error message container -->

@@ -1,11 +1,13 @@
 /**
  * Authentication service for managing user login/logout and token handling
  */
+import config from '../config.js';
+
 export class AuthService {
     constructor() {
         this.tokenKey = 'gotogether_token';
         this.userKey = 'gotogether_user';
-        this.baseUrl = '/api';
+        this.baseUrl = config.API_BASE_URL;
     }
 
     /**
