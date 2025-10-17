@@ -826,7 +826,8 @@ window.browseTrips = function() {
 
 // Show activity manager
 window.showActivityManager = function(tripId) {
-    const trip = TripStorage.getAllTrips().find(t => t.id === tripId);
+    const trips = JSON.parse(localStorage.getItem('gotogether_trips') || '[]');
+    const trip = trips.find(t => t.id === tripId);
     const user = JSON.parse(localStorage.getItem('gotogether_user'));
     
     if (!trip) {
@@ -864,7 +865,7 @@ window.showActivityManager = function(tripId) {
                                    style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; box-sizing: border-box;"
                                    onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='#e5e7eb'">
                         </div>
-                        <button id="add-activity-btn" onclick="console.log('Button clicked directly'); addActivity(${tripId})"
+                        <button id="add-activity-btn"
                                 style="background: #10b981; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px;">
                             <i class="material-icons" style="font-size: 18px;">add</i>
                             Add Activity
@@ -929,43 +930,48 @@ window.showActivityManager = function(tripId) {
 
 // Add activity function
 window.addActivity = function(tripId) {
-    alert('addActivity function called! TripId: ' + tripId);
-    console.log('addActivity function called with tripId:', tripId);
-    
     const input = document.getElementById('activity-input');
     if (!input) {
-        alert('Activity input not found!');
-        console.error('Activity input not found');
         return;
     }
     
     const activityName = input.value.trim();
-    console.log('Activity name:', activityName);
     
     if (!activityName) {
         alert('Please enter an activity name');
         return;
     }
     
-    alert('About to add activity: ' + activityName);
-    console.log('Adding activity:', activityName, 'to trip:', tripId);
+    // Add activity to trip using the inline TripStorage
+    const trips = JSON.parse(localStorage.getItem('gotogether_trips') || '[]');
+    const tripIndex = trips.findIndex(t => t.id === tripId);
     
-    // Add activity to trip
-    const success = TripStorage.addActivity(tripId, {
-        name: activityName,
-        createdBy: JSON.parse(localStorage.getItem('gotogether_user')).id
-    });
-    
-    console.log('Add activity result:', success);
-    alert('Add activity result: ' + (success ? 'SUCCESS' : 'FAILED'));
-    
-    if (success) {
-        // Clear input and refresh the activity manager
-        input.value = '';
-        showActivityManager(tripId);
-    } else {
-        alert('Failed to add activity. Please try again.');
+    if (tripIndex === -1) {
+        alert('Trip not found');
+        return;
     }
+    
+    const trip = trips[tripIndex];
+    if (!trip.activities) {
+        trip.activities = [];
+    }
+    
+    const newActivity = {
+        id: Date.now(),
+        name: activityName,
+        createdBy: JSON.parse(localStorage.getItem('gotogether_user')).id,
+        createdAt: new Date().toISOString()
+    };
+    
+    trip.activities.push(newActivity);
+    trip.updatedAt = new Date().toISOString();
+    
+    // Save back to localStorage
+    localStorage.setItem('gotogether_trips', JSON.stringify(trips));
+    
+    // Clear input and refresh the activity manager
+    input.value = '';
+    showActivityManager(tripId);
 };
 
 // Delete activity function

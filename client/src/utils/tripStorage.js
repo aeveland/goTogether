@@ -68,17 +68,32 @@ export const TripStorage = {
   },
 
   addActivity(tripId, activity) {
+    console.log('TripStorage.addActivity called with:', tripId, activity);
     const trip = this.getTripById(tripId);
+    console.log('Found trip:', trip);
+    
     if (trip) {
+      if (!trip.activities) {
+        trip.activities = [];
+        console.log('Initialized activities array');
+      }
+      
       const newActivity = {
         id: Date.now(),
         ...activity,
         createdAt: new Date().toISOString()
       };
+      console.log('Created new activity:', newActivity);
+      
       trip.activities.push(newActivity);
       trip.updatedAt = new Date().toISOString();
-      return this.saveTrip(trip);
+      console.log('Trip after adding activity:', trip);
+      
+      const result = this.saveTrip(trip);
+      console.log('Save trip result:', result);
+      return result;
     }
+    console.log('Trip not found for ID:', tripId);
     return null;
   },
 
