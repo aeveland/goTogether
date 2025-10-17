@@ -163,38 +163,36 @@ export class ApiService {
      * @returns {Promise<Array>} - Array of shopping list items
      */
     async getShoppingList(tripId) {
-        return this.get(`/trips/${tripId}/shopping`);
+        return this.get(`/shopping/trips/${tripId}`);
     }
 
     /**
      * Add item to shopping list
      * @param {string} tripId - Trip ID
      * @param {object} itemData - Shopping item data
-     * @returns {Promise<object>} - Created item object
+     * @returns {Promise<object>} - Created shopping item
      */
     async addShoppingItem(tripId, itemData) {
-        return this.post(`/trips/${tripId}/shopping`, itemData);
+        return this.post(`/shopping/trips/${tripId}`, itemData);
     }
 
     /**
-     * Update shopping list item
-     * @param {string} tripId - Trip ID
+     * Update shopping item
      * @param {string} itemId - Item ID
-     * @param {object} itemData - Updated item data
-     * @returns {Promise<object>} - Updated item object
+     * @param {object} updates - Updates to apply
+     * @returns {Promise<object>} - Updated shopping item
      */
-    async updateShoppingItem(tripId, itemId, itemData) {
-        return this.put(`/trips/${tripId}/shopping/${itemId}`, itemData);
+    async updateShoppingItem(itemId, updates) {
+        return this.put(`/shopping/items/${itemId}`, updates);
     }
 
     /**
-     * Delete shopping list item
-     * @param {string} tripId - Trip ID
+     * Delete shopping item
      * @param {string} itemId - Item ID
-     * @returns {Promise<object>} - Deletion confirmation
+     * @returns {Promise<object>} - Success response
      */
-    async deleteShoppingItem(tripId, itemId) {
-        return this.delete(`/trips/${tripId}/shopping/${itemId}`);
+    async deleteShoppingItem(itemId) {
+        return this.delete(`/shopping/items/${itemId}`);
     }
 
     // Todo list API methods

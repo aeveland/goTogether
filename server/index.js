@@ -14,6 +14,7 @@ const database = require('./models/database');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const tripRoutes = require('./routes/trips');
+const shoppingRoutes = require('./routes/shopping');
 
 // Create Express app
 const app = express();
@@ -62,6 +63,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/trips', tripRoutes);
+app.use('/api/shopping', shoppingRoutes);
 
 /**
  * Health Check Endpoint
